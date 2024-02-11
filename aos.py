@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # Euclidean distance function
 def euclidean_distance(x1, x2):
@@ -31,12 +30,22 @@ def k_means_clustering(data, k=2, max_iters=100):
     
     return np.array(centroids), [np.array(cluster) for cluster in clusters]
 
-# Generate synthetic examples based on the selected representatives
-def generate_synthetic_examples(centroids, clusters):
+# Generate synthetic examples within each cluster using SMOTE
+def smote(cluster, num_synthetic_samples=1, k=5):
     synthetic_examples = []
-    for cluster in clusters:
-        centroid = np.mean(cluster, axis=0)
-        synthetic_examples.append(2 * centroid - cluster)
+    for minority_sample in cluster:
+        neighbors = []
+        for other_sample in cluster:
+            if not np.array_equal(minority_sample, other_sample):
+                dist = euclidean_distance(minority_sample, other_sample)
+                neighbors.append((other_sample, dist))
+        neighbors.sort(key=lambda x: x[1])
+        neighbors = [neighbor[0] for neighbor in neighbors[:k]]
+        for _ in range(num_synthetic_samples):
+            neighbor = neighbors[np.random.randint(len(neighbors))]
+            alpha = np.random.rand()
+            synthetic_example = minority_sample + alpha * (neighbor - minority_sample)
+            synthetic_examples.append(synthetic_example)
     return synthetic_examples
 
 # Path to the metadata
@@ -83,10 +92,8 @@ for i, cluster in enumerate(clusters):
 print("\nFirst 100 entries with their assigned clusters:")
 print(metadata.head(100))
 
-# Generate synthetic examples within each cluster
-synthetic_examples = generate_synthetic_examples(centroids, clusters)
-
-# Print the synthetic examples
-for i, synthetic_cluster in enumerate(synthetic_examples):
-    print(f"\nSynthetic Examples for Cluster {i+1}:")
-    print(synthetic_cluster)
+# Generate and print synthetic examples for each cluster using SMOTE
+print("\nSynthetic Examples for Each Cluster (SMOTE):")
+for i, cluster in enumerate(clusters):
+    synthetic_examples = smote(cluster, num_synthetic_samples=1, k=5)
+    print(f"Cluster {i+1}: {synthetic_examples}")
